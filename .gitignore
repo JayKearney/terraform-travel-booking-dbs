@@ -1,0 +1,16 @@
+# macOS system files
+.DS_Store
+
+# Terraform directories and files
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+crash.log
+
+# Sensitive or local configuration
+*.tfvars
+*.tfvars.json
+
+# VS Code settings
+.vscode/
