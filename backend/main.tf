@@ -308,6 +308,90 @@ resource "aws_api_gateway_method_response" "addreview_post_response" {
   }
 }
 
+# DeleteReview resource with path parameter
+resource "aws_api_gateway_resource" "deletereview_resource" {
+  rest_api_id = aws_api_gateway_rest_api.backend_api.id
+  parent_id   = aws_api_gateway_resource.review_resource.id
+  path_part   = "DeleteReview"
+}
+
+resource "aws_api_gateway_resource" "deletereview_id_resource" {
+  rest_api_id = aws_api_gateway_rest_api.backend_api.id
+  parent_id   = aws_api_gateway_resource.deletereview_resource.id
+  path_part   = "{id}"
+}
+
+# DELETE method
+resource "aws_api_gateway_method" "deletereview_method" {
+  rest_api_id   = aws_api_gateway_rest_api.backend_api.id
+  resource_id   = aws_api_gateway_resource.deletereview_id_resource.id
+  http_method   = "DELETE"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "deletereview_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.backend_api.id
+  resource_id             = aws_api_gateway_resource.deletereview_id_resource.id
+  http_method             = aws_api_gateway_method.deletereview_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.backend_lambda.invoke_arn
+}
+
+# CORS OPTIONS for /Review/DeleteReview/{id}
+resource "aws_api_gateway_method" "deletereview_options_method" {
+  rest_api_id   = aws_api_gateway_rest_api.backend_api.id
+  resource_id   = aws_api_gateway_resource.deletereview_id_resource.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method_response" "deletereview_options_response" {
+  rest_api_id = aws_api_gateway_rest_api.backend_api.id
+  resource_id = aws_api_gateway_resource.deletereview_id_resource.id
+  http_method = aws_api_gateway_method.deletereview_options_method.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true,
+    "method.response.header.Access-Control-Allow-Methods" = true,
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration" "deletereview_options_integration" {
+  rest_api_id = aws_api_gateway_rest_api.backend_api.id
+  resource_id = aws_api_gateway_resource.deletereview_id_resource.id
+  http_method = aws_api_gateway_method.deletereview_options_method.http_method
+  type        = "MOCK"
+  request_templates = {
+    "application/json" = jsonencode({ statusCode = 200 })
+  }
+}
+
+resource "aws_api_gateway_integration_response" "deletereview_options_integration_response" {
+  rest_api_id = aws_api_gateway_rest_api.backend_api.id
+  resource_id = aws_api_gateway_resource.deletereview_id_resource.id
+  http_method = aws_api_gateway_method.deletereview_options_method.http_method
+  status_code = aws_api_gateway_method_response.deletereview_options_response.status_code
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+    "method.response.header.Access-Control-Allow-Methods" = "'DELETE,OPTIONS'",
+    "method.response.header.Access-Control-Allow-Origin"  = "'https://d2qn627n6ccjjs.cloudfront.net'"
+  }
+}
+
+# Add CORS headers to the DELETE method response
+resource "aws_api_gateway_method_response" "deletereview_delete_response" {
+  rest_api_id = aws_api_gateway_rest_api.backend_api.id
+  resource_id = aws_api_gateway_resource.deletereview_id_resource.id
+  http_method = aws_api_gateway_method.deletereview_method.http_method
+  status_code = "200"
+  
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
 # Lambda permissions
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
@@ -325,9 +409,11 @@ resource "aws_api_gateway_deployment" "backend_deployment" {
     aws_api_gateway_integration.lambda_integration,
     aws_api_gateway_integration.getreviews_integration,
     aws_api_gateway_integration.login_integration,
+    aws_api_gateway_integration.deletereview_integration,
     aws_api_gateway_integration.addreview_options_integration,
     aws_api_gateway_integration.getreviews_options_integration,
-    aws_api_gateway_integration.login_options_integration
+    aws_api_gateway_integration.login_options_integration,
+    aws_api_gateway_integration.deletereview_options_integration
   ]
 
   triggers = {
@@ -336,9 +422,11 @@ resource "aws_api_gateway_deployment" "backend_deployment" {
       aws_api_gateway_integration.lambda_integration.id,
       aws_api_gateway_integration.getreviews_integration.id,
       aws_api_gateway_integration.login_integration.id,
+      aws_api_gateway_integration.deletereview_integration.id,
       aws_api_gateway_integration.addreview_options_integration.id,
       aws_api_gateway_integration.getreviews_options_integration.id,
-      aws_api_gateway_integration.login_options_integration.id
+      aws_api_gateway_integration.login_options_integration.id,
+      aws_api_gateway_integration.deletereview_options_integration.id
     ]))
   }
 
@@ -368,4 +456,8 @@ output "api_gateway_getreviews_url" {
 
 output "api_gateway_addreview_url" {
   value = "https://${aws_api_gateway_rest_api.backend_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/Review/AddReview"
+}
+
+output "api_gateway_deletereview_url" {
+  value = "https://${aws_api_gateway_rest_api.backend_api.id}.execute-api.${var.aws_region}.amazonaws.com/prod/api/Review/DeleteReview"
 }
